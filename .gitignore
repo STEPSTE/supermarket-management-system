@@ -31,3 +31,19 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Compiled class file
+*.class
+
+# Log files
+*.log
+
+# JAR files
+*.jar
+*.war
+*.ear
+*.zip
+
+# Crash logs
+hs_err_pid*
+replay_pid*
