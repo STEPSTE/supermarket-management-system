@@ -2,6 +2,7 @@ package com.boutique.service;
 
 import com.boutique.dto.request.CreateOrderRequest;
 import com.boutique.dto.request.OrderItemRequest;
+import com.boutique.dto.request.UpdateOrderStatusRequest;
 import com.boutique.exception.BusinessException;
 import com.boutique.exception.ResourceNotFoundException;
 import com.boutique.model.*;
@@ -19,11 +20,14 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final EmailService emailService;
 
-    public OrderService(OrderRepository orderRepository, UserRepository userRepository, ProductRepository productRepository) {
+    public OrderService(OrderRepository orderRepository, UserRepository userRepository, 
+                        ProductRepository productRepository, EmailService emailService) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -47,10 +51,10 @@ public class OrderService {
                 );
             }
 
-            // Débiter le stock
             product.setStockQuantity(product.getStockQuantity() - itemReq.quantity());
             if (product.getStockQuantity() == 0) {
-                product.setStatus(ProductStatus.RUPTURE);
+                product.setStatus(ProductStatus.OUT_OF_STOCK);
+                emailService.sendStockAlert(product);
             }
             productRepository.save(product);
 
@@ -64,8 +68,24 @@ public class OrderService {
         }
 
         order.setTotalAmount(total);
-        order.setStatus(OrderStatus.COMPLETED);
-        return orderRepository.save(order);
+        order.setStatus(OrderStatus.CONFIRMED);
+        Order saved = orderRepository.save(order);
+        emailService.sendOrderConfirmation(saved);
+        return saved;
+    }
+
+    public Order updateStatus(Long id, UpdateOrderStatusRequest request) {
+        Order order = findById(id);
+        order.setStatus(request.status());
+        if (request.trackingNumber() != null) order.setTrackingNumber(request.trackingNumber());
+        if (request.shippingAddress() != null) order.setShippingAddress(request.shippingAddress());
+        
+        Order saved = orderRepository.save(order);
+        
+        if (request.status() == OrderStatus.SHIPPED) {
+            emailService.sendShippingNotification(saved);
+        }
+        return saved;
     }
 
     public List<Order> findAll() {
@@ -78,6 +98,6 @@ public class OrderService {
     }
 
     public List<Order> findByUserId(Long userId) {
-        return orderRepository.findByUserId(userId);
+        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 }

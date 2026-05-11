@@ -1,5 +1,3 @@
 package com.boutique.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
-
-public record VariantDto(@NotBlank String type, @NotBlank String value) {}
+public record VariantDto(String type, String value, Integer stock, Double price, Boolean available) {}

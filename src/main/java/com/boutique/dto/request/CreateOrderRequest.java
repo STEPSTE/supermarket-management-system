@@ -1,4 +1,3 @@
-
 package com.boutique.dto.request;
 
 import jakarta.validation.constraints.NotEmpty;

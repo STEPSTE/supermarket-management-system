@@ -19,13 +19,16 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+    
+    @Column(nullable = false)
+    private Boolean active = true;
 
     public User() {}
-
     public User(String name, String email, Role role) {
         this.name = name;
         this.email = email;
         this.role = role;
+        this.active = true;
     }
 
     public Long getId() { return id; }
@@ -36,4 +39,6 @@ public class User {
     public void setEmail(String email) { this.email = email; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean active) { this.active = active; }
 }

@@ -24,13 +24,11 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // Vérifie si des données existent déjà
         if (userRepository.count() > 0) {
-            System.out.println("✅ Base de données déjà initialisée");
+            System.out.println("✅ Base SQLite déjà initialisée");
             return;
         }
 
-        // Créer des utilisateurs
         User admin = new User("Admin", "admin@boutique.com", Role.ADMIN);
         User vendor = new User("Alice Vendeuse", "alice@boutique.com", Role.VENDOR);
         User customer = new User("Bob Client", "bob@client.com", Role.CUSTOMER);
@@ -39,13 +37,11 @@ public class DataInitializer implements CommandLineRunner {
         userRepository.save(vendor);
         userRepository.save(customer);
 
-        // Créer des catégories
         Category electronics = new Category("Électronique");
         Category clothing = new Category("Vêtements");
         categoryRepository.save(electronics);
         categoryRepository.save(clothing);
 
-        // Créer des produits
         Product phone = new Product();
         phone.setName("iPhone 15 Pro");
         phone.setDescription("Smartphone haut de gamme");
@@ -54,7 +50,7 @@ public class DataInitializer implements CommandLineRunner {
         phone.setStatus(ProductStatus.DISPONIBLE);
         phone.setCategory(electronics);
         phone.setCreatedBy(vendor);
-        phone.setPhotos(List.of(new Photo("https://example.com/iphone.jpg")));
+        phone.setPhotos(List.of(new Photo("https://example.com/iphone.jpg", true)));
         phone.setVariants(List.of(new Variant("Couleur", "Titanium"), new Variant("Stockage", "256GB")));
         
         productRepository.save(phone);

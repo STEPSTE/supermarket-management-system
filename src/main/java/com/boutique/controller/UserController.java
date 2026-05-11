@@ -3,6 +3,8 @@ package com.boutique.controller;
 import com.boutique.dto.ApiResponse;
 import com.boutique.dto.request.CreateUserRequest;
 import com.boutique.dto.request.UpdateUserRequest;
+import com.boutique.dto.request.UpdateUserStatusRequest;
+import com.boutique.model.Role;
 import com.boutique.model.User;
 import com.boutique.service.UserService;
 import jakarta.validation.Valid;
@@ -38,9 +40,24 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.findById(id)));
     }
 
+    @GetMapping("/role/{role}")
+    public ResponseEntity<ApiResponse<List<User>>> findByRole(@PathVariable Role role) {
+        return ResponseEntity.ok(ApiResponse.success(userService.findByRole(role)));
+    }
+
+    @GetMapping("/active/{active}")
+    public ResponseEntity<ApiResponse<List<User>>> findByActive(@PathVariable Boolean active) {
+        return ResponseEntity.ok(ApiResponse.success(userService.findByActive(active)));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<User>> update(@PathVariable Long id, @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(ApiResponse.success(userService.update(id, request), "Utilisateur mis à jour"));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<User>> toggleStatus(@PathVariable Long id, @Valid @RequestBody UpdateUserStatusRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(userService.toggleStatus(id, request), "Statut mis à jour"));
     }
 
     @DeleteMapping("/{id}")

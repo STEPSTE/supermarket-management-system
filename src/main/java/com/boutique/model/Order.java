@@ -28,6 +28,12 @@ public class Order {
     @Column(nullable = false)
     private OrderStatus status;
     
+    @Column(name = "tracking_number")
+    private String trackingNumber;
+    
+    @Column(name = "shipping_address")
+    private String shippingAddress;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -46,6 +52,10 @@ public class Order {
     public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
     public OrderStatus getStatus() { return status; }
     public void setStatus(OrderStatus status) { this.status = status; }
+    public String getTrackingNumber() { return trackingNumber; }
+    public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
+    public String getShippingAddress() { return shippingAddress; }
+    public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

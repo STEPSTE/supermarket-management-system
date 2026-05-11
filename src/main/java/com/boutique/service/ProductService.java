@@ -21,11 +21,14 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final EmailService emailService;
 
-    public ProductService(ProductRepository productRepository, UserRepository userRepository, CategoryRepository categoryRepository) {
+    public ProductService(ProductRepository productRepository, UserRepository userRepository, 
+                          CategoryRepository categoryRepository, EmailService emailService) {
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
+        this.emailService = emailService;
     }
 
     public Product createProduct(CreateProductRequest request) {
@@ -47,12 +50,20 @@ public class ProductService {
         }
 
         if (request.photos() != null) {
-            product.setPhotos(request.photos().stream().map(p -> new Photo(p.url())).collect(Collectors.toList()));
+            product.setPhotos(request.photos().stream()
+                .map(p -> new Photo(p.url(), p.isMain() != null ? p.isMain() : false))
+                .collect(Collectors.toList()));
         }
 
         if (request.variants() != null) {
             product.setVariants(request.variants().stream()
-                    .map(v -> new Variant(v.type(), v.value())).collect(Collectors.toList()));
+                .map(v -> {
+                    Variant var = new Variant(v.type(), v.value());
+                    var.setStock(v.stock());
+                    var.setPrice(v.price());
+                    var.setAvailable(v.available());
+                    return var;
+                }).collect(Collectors.toList()));
         }
 
         return productRepository.save(product);
@@ -60,13 +71,8 @@ public class ProductService {
 
     public PageResponse<Product> findAll(int page, int size) {
         Page<Product> result = productRepository.findAll(PageRequest.of(page, size));
-        return new PageResponse<>(
-            result.getContent(),
-            result.getNumber(),
-            result.getSize(),
-            result.getTotalElements(),
-            result.getTotalPages()
-        );
+        return new PageResponse<>(result.getContent(), result.getNumber(), result.getSize(), 
+                                  result.getTotalElements(), result.getTotalPages());
     }
 
     public Product findById(Long id) {
@@ -74,36 +80,25 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Produit non trouvé: " + id));
     }
 
-    public PageResponse<Product> searchByName(String name, int page, int size) {
-        // Pour SQLite, on fait la pagination manuellement car LIKE peut être limité
-        List<Product> allResults = productRepository.findByNameContainingIgnoreCase(name);
-        return paginate(allResults, page, size);
+    public List<Product> search(ProductSearchRequest request) {
+        return productRepository.searchProducts(
+            request.name(), request.categoryId(), request.minPrice(), 
+            request.maxPrice(), request.status()
+        );
     }
 
     public Product update(Long id, UpdateProductRequest request) {
         Product product = findById(id);
-
         if (request.name() != null) product.setName(request.name());
         if (request.description() != null) product.setDescription(request.description());
         if (request.price() != null) product.setPrice(request.price());
         if (request.stockQuantity() != null) product.setStockQuantity(request.stockQuantity());
         if (request.status() != null) product.setStatus(request.status());
-
         if (request.categoryId() != null) {
             Category category = categoryRepository.findById(request.categoryId())
                     .orElseThrow(() -> new ResourceNotFoundException("Catégorie non trouvée"));
             product.setCategory(category);
         }
-
-        if (request.photos() != null) {
-            product.setPhotos(request.photos().stream().map(p -> new Photo(p.url())).collect(Collectors.toList()));
-        }
-
-        if (request.variants() != null) {
-            product.setVariants(request.variants().stream()
-                    .map(v -> new Variant(v.type(), v.value())).collect(Collectors.toList()));
-        }
-
         updateStatusBasedOnStock(product);
         return productRepository.save(product);
     }
@@ -132,11 +127,18 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    public Product setMainPhoto(Long productId, String url) {
+        Product product = findById(productId);
+        for (Photo p : product.getPhotos()) {
+            p.setIsMain(p.getUrl().equals(url));
+        }
+        return productRepository.save(product);
+    }
+
     public Product addComment(Long productId, CommentDto request) {
         Product product = findById(productId);
         User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
-
         Comment comment = new Comment(user, request.content(), request.rating());
         product.getComments().add(comment);
         return productRepository.save(product);
@@ -144,18 +146,10 @@ public class ProductService {
 
     private void updateStatusBasedOnStock(Product product) {
         if (product.getStockQuantity() <= 0) {
-            product.setStatus(ProductStatus.RUPTURE);
-        } else if (product.getStatus() == ProductStatus.RUPTURE && product.getStockQuantity() > 0) {
+            product.setStatus(ProductStatus.OUT_OF_STOCK);
+            emailService.sendStockAlert(product);
+        } else if (product.getStatus() == ProductStatus.OUT_OF_STOCK || product.getStatus() == ProductStatus.RUPTURE) {
             product.setStatus(ProductStatus.DISPONIBLE);
         }
-    }
-
-    private PageResponse<Product> paginate(List<Product> list, int page, int size) {
-        int total = list.size();
-        int totalPages = (int) Math.ceil((double) total / size);
-        int from = page * size;
-        int to = Math.min(from + size, total);
-        List<Product> content = (from < total) ? list.subList(from, to) : List.of();
-        return new PageResponse<>(content, page, size, total, totalPages);
     }
 }

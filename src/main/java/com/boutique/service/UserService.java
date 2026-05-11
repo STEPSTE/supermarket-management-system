@@ -2,8 +2,10 @@ package com.boutique.service;
 
 import com.boutique.dto.request.CreateUserRequest;
 import com.boutique.dto.request.UpdateUserRequest;
+import com.boutique.dto.request.UpdateUserStatusRequest;
 import com.boutique.exception.BusinessException;
 import com.boutique.exception.ResourceNotFoundException;
+import com.boutique.model.Role;
 import com.boutique.model.User;
 import com.boutique.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -14,9 +16,11 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, EmailService emailService) {
         this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     public User createUser(CreateUserRequest request) {
@@ -24,7 +28,9 @@ public class UserService {
             throw new BusinessException("Email déjà utilisé: " + request.email());
         });
         User user = new User(request.name(), request.email(), request.role());
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        emailService.sendWelcomeEmail(saved);
+        return saved;
     }
 
     public List<User> findAll() {
@@ -36,12 +42,28 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé: " + id));
     }
 
+    public List<User> findByRole(Role role) {
+        return userRepository.findByRole(role);
+    }
+
+    public List<User> findByActive(Boolean active) {
+        return userRepository.findByActive(active);
+    }
+
     public User update(Long id, UpdateUserRequest request) {
         User user = findById(id);
         if (request.name() != null) user.setName(request.name());
         if (request.email() != null) user.setEmail(request.email());
         if (request.role() != null) user.setRole(request.role());
         return userRepository.save(user);
+    }
+
+    public User toggleStatus(Long id, UpdateUserStatusRequest request) {
+        User user = findById(id);
+        user.setActive(request.active());
+        User saved = userRepository.save(user);
+        emailService.sendAccountStatusChange(saved);
+        return saved;
     }
 
     public void delete(Long id) {

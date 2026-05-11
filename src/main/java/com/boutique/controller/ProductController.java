@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
@@ -38,12 +40,9 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(productService.findById(id)));
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<PageResponse<Product>>> search(
-            @RequestParam String name,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.success(productService.searchByName(name, page, size)));
+    @PostMapping("/search")
+    public ResponseEntity<ApiResponse<List<Product>>> search(@RequestBody ProductSearchRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(productService.search(request)));
     }
 
     @PutMapping("/{id}")
@@ -69,6 +68,11 @@ public class ProductController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateStockRequest request) {
         return ResponseEntity.ok(ApiResponse.success(productService.decrementStock(id, request.quantity()), "Stock décrémenté"));
+    }
+
+    @PostMapping("/{id}/main-photo")
+    public ResponseEntity<ApiResponse<Product>> setMainPhoto(@PathVariable Long id, @RequestParam String url) {
+        return ResponseEntity.ok(ApiResponse.success(productService.setMainPhoto(id, url), "Photo principale mise à jour"));
     }
 
     @PostMapping("/{id}/comments")
