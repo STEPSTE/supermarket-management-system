@@ -1,51 +1,37 @@
-package com.boutique.model;
+package com.group9.domain.model;
 
+import com.group9.domain.enums.OrderStatus;
 import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "orders")
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor @Builder
 public class Order {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    private LocalDateTime orderDate;
     
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-    
-    @ElementCollection
-    @CollectionTable(name = "order_items", joinColumns = @JoinColumn(name = "order_id"))
-    private List<OrderItem> items = new ArrayList<>();
-    
-    @Column(name = "total_amount")
-    private Double totalAmount;
-    
+    private String clientFullName;
+    private String clientEmail;
+    private String clientPhoneNumber;
+    private String clientOperator;
+    private String deliveryAddress; // Ajouté
+
+    private BigDecimal totalAmount;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private OrderStatus status;
-    
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
 
-    public Order() {
-        this.createdAt = LocalDateTime.now();
-        this.status = OrderStatus.PENDING;
-    }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-    public List<OrderItem> getItems() { return items; }
-    public void setItems(List<OrderItem> items) { this.items = items; }
-    public Double getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
-    public OrderStatus getStatus() { return status; }
-    public void setStatus(OrderStatus status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    @Builder.Default
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> items = new ArrayList<>();
 }
